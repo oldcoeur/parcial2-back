@@ -3,9 +3,10 @@ import { generateChatResponse, getConversationHistory } from '../controllers/cha
 
 const router = express.Router();
 
-// Ruta para generar respuestas de ChatGPT
+// Ruta principal de chat fitness CBUM
 router.post('/', generateChatResponse);
-// Ruta para obtener el historial de conversaciones
-router.get('/history', getConversationHistory);
 
-export { router };
+// Ruta para historial de conversaciones por usuario
+router.get('/chat/history', getConversationHistory);
+
+export default router;

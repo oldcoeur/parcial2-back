@@ -1,14 +1,23 @@
 import mongoose from 'mongoose';
 
 const conversationSchema = new mongoose.Schema({
-  prompt: {
+  username: {
     type: String,
     required: true
   },
-  response: {
-    type: String,
-    required: true
-  },
+  messages: [
+    {
+      role: {
+        type: String,
+        enum: ['system', 'user', 'assistant'],
+        required: true
+      },
+      content: {
+        type: String,
+        required: true
+      }
+    }
+  ],
   createdAt: {
     type: Date,
     default: Date.now

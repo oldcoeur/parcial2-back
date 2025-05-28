@@ -3,6 +3,10 @@ import cors from 'cors';
 import { OpenAI } from 'openai';
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
+import authRoutes from './routes/authRoutes.js';
+import User from './models/User.js'; // Importar modelo de usuario
+import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
 
 // Cargar variables de entorno
 dotenv.config();
@@ -17,16 +21,20 @@ mongoose.connect(process.env.MONGODB_URI)
 
 // Modelo para los resultados de trivia
 const triviaResultSchema = new mongoose.Schema({
-  category: String,
-  questions: [{
-    question: String,
-    options: [{
-      text: String,
-      isCorrect: Boolean
-    }]
-  }],
-  score: Number,
-  timestamp: { type: Date, default: Date.now }
+  category: { type: String, required: true },
+  questions: [
+    {
+      question: { type: String, required: true },
+      options: [
+        {
+          text: { type: String, required: true },
+          isCorrect: { type: Boolean, required: true },
+        },
+      ],
+    },
+  ],
+  score: { type: Number, required: true },
+  timestamp: { type: Date, default: Date.now },
 });
 
 const TriviaResult = mongoose.model('TriviaResult', triviaResultSchema);
@@ -115,6 +123,41 @@ app.get('/', (req, res) => {
   res.json({ message: 'API de Trivia funcionando' });
 });
 
+// Ruta de autenticación
+app.use('/api/auth', authRoutes);
+
+// Endpoint para manejar el inicio de sesión
+app.post('/api/login', (req, res) => {
+  const { nombre } = req.body;
+  if (!nombre) {
+    return res.status(400).json({ error: 'El nombre es obligatorio' });
+  }
+  res.json({ success: true, message: `Bienvenido, ${nombre}!` });
+});
+
+// Endpoint para generar el plan de entrenamiento
+app.post('/api/plan', async (req, res) => {
+  try {
+    const { profile } = req.body;
+    if (!profile || Object.values(profile).some((v) => !v)) {
+      return res.status(400).json({ error: 'Todos los campos del perfil son obligatorios' });
+    }
+
+    const prompt = `Genera un plan de entrenamiento y nutrición personalizado para este usuario.\n\nDatos del usuario:\n${Object.entries(profile).map(([k, v]) => `- ${k}: ${v}`).join('\n')}\n\nResponde de forma directa, motivadora y profesional.`;
+    const response = await openai.chat.completions.create({
+      model: 'gpt-3.5-turbo',
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.7,
+    });
+
+    const plan = response.choices[0].message.content;
+    res.json({ success: true, plan });
+  } catch (error) {
+    console.error('Error al generar el plan:', error);
+    res.status(500).json({ error: 'Error al generar el plan' });
+  }
+});
+
 app.listen(port, () => {
   console.log(`Servidor corriendo en http://localhost:${port}`);
-}); 
+});
